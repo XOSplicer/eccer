@@ -3,6 +3,8 @@ use std::fmt;
 use tokio::stream::Stream;
 use tokio::sync::mpsc;
 use url::Url;
+use serde::Serialize;
+use log::debug;
 
 #[derive(Clone)]
 pub struct Db {
@@ -52,6 +54,24 @@ impl Db {
         Ok(url)
     }
 
+    pub async fn get_all_endpoint_urls(&mut self) -> Result<Vec<EndpointRecord>, Error> {
+        use etcd_client::{GetOptions, SortOrder, SortTarget};
+        let options = GetOptions::new()
+            .with_prefix();
+        let key = self.new_prefixed_property_key("url".into(), EmptyKey).to_string();
+        let res = self.client.get(key, Some(options)).await?;
+        res
+            .kvs()
+            .into_iter()
+            .map(|kv| {
+                let path: PrefixedKey<PropertyKey<EndpointKey>> = kv.key_str()?.parse()?;
+                let key = path.key.inner.key;
+                let url = kv.value_str()?.parse()?;
+                Ok(EndpointRecord { key, url })
+            })
+            .collect()
+    }
+
     // pub async fn get_all_endpoint_urls(&mut self) -> impl Stream<Item = Result<EndpointRecord, Error>> {
     //     use etcd_client::{GetOptions, SortOrder, SortTarget};
     //     let limit: usize = 100;
@@ -65,10 +85,15 @@ impl Db {
 
     //     // TODO: use mpsc::bounded to provide a stream and spawn a task that uses a multi stept get request with pointer
     //     receiver
+
+    // first range
+    // # etcdctl -w fields get --keys-only --sort-by=KEY --limit 2 eccer eccer\0
+    // following ranges with last key + \0
+    // # etcdctl -w fields get --keys-only --sort-by=KEY --rev 4 eccer/url/myservice/1/https\0 eccer\0
     // }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct EndpointRecord {
     pub key: EndpointKey,
     pub url: Url,
@@ -138,7 +163,7 @@ impl<K: Key> PropertyKey<K> {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct EndpointKey {
     pub service_name: String,
     pub instance_name: String,
@@ -160,7 +185,7 @@ impl fmt::Display for EndpointKey {
 impl std::str::FromStr for EndpointKey {
     type Err = Error;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut parts = s.splitn(3, "3");
+        let mut parts = s.splitn(3, "/");
         let service_name = parts.next().ok_or(Error::ParseEtcdKeyError)?.to_owned();
         let instance_name = parts.next().ok_or(Error::ParseEtcdKeyError)?.to_owned();
         let endpoint_name = parts.next().ok_or(Error::ParseEtcdKeyError)?.to_owned();
@@ -169,5 +194,26 @@ impl std::str::FromStr for EndpointKey {
             instance_name,
             endpoint_name,
         })
+    }
+}
+
+#[derive(Debug, Clone)]
+struct EmptyKey;
+
+impl Key for EmptyKey {}
+
+impl fmt::Display for EmptyKey {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "")
+    }
+}
+
+impl std::str::FromStr for EmptyKey {
+    type Err = Error;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if s != "" {
+            return Err(Error::ParseEtcdKeyError);
+        }
+        Ok(EmptyKey)
     }
 }

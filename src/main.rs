@@ -49,6 +49,8 @@ async fn main() -> tide::Result<()> {
     app.at("/services/:service_name/instances/:instance_name/endpoints/:endpoint_name")
         .post(register)
         .get(read);
+    app.at("/all")
+        .get(read_all);
     app.listen(opt.listen).await?;
 
     Ok(())
@@ -96,4 +98,10 @@ async fn read(req: Request<State>) -> tide::Result {
         endpoint_url,
     };
     Ok(tide::Body::from_json(&read_response)?.into())
+}
+
+async fn read_all(req: Request<State>) -> tide::Result {
+    let mut db = req.state().db.clone();
+    let endpoint_urls = db.get_all_endpoint_urls().await?;
+    Ok(tide::Body::from_json(&endpoint_urls)?.into())
 }
