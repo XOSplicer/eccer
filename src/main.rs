@@ -1,7 +1,9 @@
+use serde::Serialize;
 use structopt::StructOpt;
 use tide::prelude::*;
 use tide::utils::After;
 use tide::Request;
+use tokio;
 use url::Url;
 
 mod db;
@@ -49,8 +51,7 @@ async fn main() -> tide::Result<()> {
     app.at("/services/:service_name/instances/:instance_name/endpoints/:endpoint_name")
         .post(register)
         .get(read);
-    app.at("/all")
-        .get(read_all);
+    app.at("/all").get(read_all);
     app.listen(opt.listen).await?;
 
     Ok(())

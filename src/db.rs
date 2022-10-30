@@ -1,10 +1,8 @@
 use crate::error::Error;
-use std::fmt;
-use tokio::stream::Stream;
-use tokio::sync::mpsc;
-use url::Url;
+use etcd_client::GetOptions;
 use serde::Serialize;
-use log::debug;
+use std::fmt;
+use url::Url;
 
 #[derive(Clone)]
 pub struct Db {
@@ -55,13 +53,12 @@ impl Db {
     }
 
     pub async fn get_all_endpoint_urls(&mut self) -> Result<Vec<EndpointRecord>, Error> {
-        use etcd_client::{GetOptions, SortOrder, SortTarget};
-        let options = GetOptions::new()
-            .with_prefix();
-        let key = self.new_prefixed_property_key("url".into(), EmptyKey).to_string();
+        let options = GetOptions::new().with_prefix();
+        let key = self
+            .new_prefixed_property_key("url".into(), EmptyKey)
+            .to_string();
         let res = self.client.get(key, Some(options)).await?;
-        res
-            .kvs()
+        res.kvs()
             .into_iter()
             .map(|kv| {
                 let path: PrefixedKey<PropertyKey<EndpointKey>> = kv.key_str()?.parse()?;
