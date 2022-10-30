@@ -1,6 +1,13 @@
 version: "3.5"
 services:
 
+  # eccer-api:
+  #   container_name: eccer-api
+  #   image: eccer:latest
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+
   nats-1:
     container_name: nats-1
     image: nats:2.9.4
