@@ -14,6 +14,27 @@ struct ReadResponse {
     endpoint_url: Url,
 }
 
+impl ReadResponse {
+    fn from_endpoint_url(endpoint: db::EndpointKey, url: Url) -> Self {
+        ReadResponse {
+            service_name: endpoint.service_name,
+            instance_name: endpoint.instance_name,
+            endpoint_name: endpoint.endpoint_name,
+            endpoint_url: url,
+        }
+    }
+}
+
+fn endpoint_key_from_req<S>(req: &Request<S>) -> tide::Result<db::EndpointKey> {
+    Ok(db::EndpointKey {
+        service_name: req.param("service_name")?.into(),
+        instance_name: req.param("instance_name")?.into(),
+        endpoint_name: req.param("endpoint_name")?.into(),
+    })
+}
+
+
+
 #[derive(Clone)]
 struct State {
     opt: opt::Opt,
@@ -60,46 +81,22 @@ async fn ping(_req: Request<State>) -> tide::Result {
 }
 
 async fn register(mut req: Request<State>) -> tide::Result {
-    let service_name: String = req.param("service_name")?.into();
-    let instance_name: String = req.param("instance_name")?.into();
-    let endpoint_name: String = req.param("endpoint_name")?.into();
-    let endpoint = db::EndpointKey {
-        service_name: service_name.clone(),
-        instance_name: instance_name.clone(),
-        endpoint_name: endpoint_name.clone(),
-    };
+    let endpoint = endpoint_key_from_req(&req)?;
     let body = req.body_string().await?;
     // FIXME: json api
     let endpoint_url = Url::parse(&body)?;
     let mut db = req.state().db.clone();
-    db.add_endpoint_url(endpoint, &endpoint_url).await?;
-    let read_response = ReadResponse {
-        service_name,
-        instance_name,
-        endpoint_name,
-        endpoint_url,
-    };
+    db.add_endpoint_url(endpoint.clone(), &endpoint_url).await?;
+    let read_response = ReadResponse::from_endpoint_url(endpoint, endpoint_url);
     // FIXME:  status code
     Ok(tide::Body::from_json(&read_response)?.into())
 }
 
 async fn read(req: Request<State>) -> tide::Result {
-    let service_name: String = req.param("service_name")?.into();
-    let instance_name: String = req.param("instance_name")?.into();
-    let endpoint_name: String = req.param("endpoint_name")?.into();
-    let endpoint = db::EndpointKey {
-        service_name: service_name.clone(),
-        instance_name: instance_name.clone(),
-        endpoint_name: endpoint_name.clone(),
-    };
+    let endpoint = endpoint_key_from_req(&req)?;
     let mut db = req.state().db.clone();
-    let endpoint_url = db.get_endpoint_url(endpoint).await?;
-    let read_response = ReadResponse {
-        service_name,
-        instance_name,
-        endpoint_name,
-        endpoint_url,
-    };
+    let endpoint_url = db.get_endpoint_url(endpoint.clone()).await?;
+    let read_response = ReadResponse::from_endpoint_url(endpoint, endpoint_url);
     Ok(tide::Body::from_json(&read_response)?.into())
 }
 
