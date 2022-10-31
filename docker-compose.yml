@@ -1,7 +1,7 @@
 version: "3.5"
 services:
 
-  # eccer-api:
+  # eccer-server:
   #   container_name: eccer-api
   #   image: eccer:latest
   #   build:
@@ -13,6 +13,7 @@ services:
     image: nats:2.9.4
     ports:
       - "8222:8222"
+      - "4222:4222"
 
   nats-2:
     container_name: nats-2

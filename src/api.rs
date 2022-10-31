@@ -3,6 +3,8 @@ use serde::Serialize;
 use tide::prelude::*;
 use tide::utils::After;
 use tide::Request;
+use tide::log::LogMiddleware;
+use tide::Body;
 use url::Url;
 
 // FIXME: id vs name ??
@@ -46,10 +48,11 @@ pub async fn run(opt: opt::Opt, db: db::Db) -> tide::Result<()> {
     let state = State { db, opt };
     let mut app = tide::with_state(state);
 
+    app.with(LogMiddleware::new());
     // FIXME: error handling
     app.with(After(|mut res: tide::Response| async {
         if let Some(err) = res.error() {
-            log::error!("request failed: {:?}", &err);
+            log::error!("Request failed: {:?}", &err);
             let msg = format!("Error: {:?}", &err);
             res.set_body(msg);
         }
@@ -58,6 +61,7 @@ pub async fn run(opt: opt::Opt, db: db::Db) -> tide::Result<()> {
 
     app.at("/").get(root);
     app.at("/ping").get(ping);
+    app.at("/openapi.yaml").get(openapi);
     app.at("/all").get(read_all);
     app.at("/services/:service_name/instances/:instance_name/endpoints/:endpoint_name")
         .post(register)
@@ -70,14 +74,19 @@ pub async fn run(opt: opt::Opt, db: db::Db) -> tide::Result<()> {
 
 
 async fn root(_req: Request<State>) -> tide::Result {
-    const CARGO_PKG_VERSION: &'static str = env!("CARGO_PKG_VERSION");
-    let s = format!("Welcome to eccer v{}", CARGO_PKG_VERSION);
+    let s = format!("Welcome to eccer v{}", env!("CARGO_PKG_VERSION"));
     Ok(s.into())
 }
 
 
 async fn ping(_req: Request<State>) -> tide::Result {
     Ok("ok".into())
+}
+
+async fn openapi(_req: Request<State>) -> tide::Result {
+    let mut body = Body::from_string(include_str!("../openapi.yaml").into());
+    body.set_mime("text/yaml");
+    Ok(body.into())
 }
 
 async fn register(mut req: Request<State>) -> tide::Result {
@@ -89,7 +98,7 @@ async fn register(mut req: Request<State>) -> tide::Result {
     db.add_endpoint_url(endpoint.clone(), &endpoint_url).await?;
     let read_response = ReadResponse::from_endpoint_url(endpoint, endpoint_url);
     // FIXME:  status code
-    Ok(tide::Body::from_json(&read_response)?.into())
+    Ok(Body::from_json(&read_response)?.into())
 }
 
 async fn read(req: Request<State>) -> tide::Result {
@@ -97,11 +106,11 @@ async fn read(req: Request<State>) -> tide::Result {
     let mut db = req.state().db.clone();
     let endpoint_url = db.get_endpoint_url(endpoint.clone()).await?;
     let read_response = ReadResponse::from_endpoint_url(endpoint, endpoint_url);
-    Ok(tide::Body::from_json(&read_response)?.into())
+    Ok(Body::from_json(&read_response)?.into())
 }
 
 async fn read_all(req: Request<State>) -> tide::Result {
     let mut db = req.state().db.clone();
     let endpoint_urls = db.get_all_endpoint_urls().await?;
-    Ok(tide::Body::from_json(&endpoint_urls)?.into())
+    Ok(Body::from_json(&endpoint_urls)?.into())
 }

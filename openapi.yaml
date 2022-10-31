@@ -1,0 +1,38 @@
+openapi: 3.0.0
+info:
+  title: eccer API
+  version: 0.1.1
+
+paths:
+  '/':
+    get:
+      responses:
+        '200':
+          description: root page with information about eccer
+          content:
+            'text/plain; charset=utf-8':
+              schema:
+                type: string
+
+  '/ping':
+    get:
+      responses:
+        '200':
+          description: ping page
+          content:
+            'text/plain; charset=utf-8':
+              schema:
+                type: string
+
+  '/openapi.yaml':
+    get:
+      responses:
+        '200':
+          description: this document
+          content:
+            'text/yaml':
+              schema:
+                type: string
+
+# TODO: fill once established
+

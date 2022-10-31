@@ -8,6 +8,8 @@ mod db;
 mod error;
 mod opt;
 mod api;
+mod dispatch;
+mod queue;
 
 #[tokio::main]
 async fn main() -> tide::Result<()> {
