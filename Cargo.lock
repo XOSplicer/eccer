@@ -786,8 +786,11 @@ name = "eccer"
 version = "0.1.1"
 dependencies = [
  "anyhow",
+ "async-stream",
  "env_logger",
  "etcd-client",
+ "futures-core",
+ "futures-util",
  "log",
  "nats",
  "serde",

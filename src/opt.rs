@@ -1,5 +1,7 @@
 #[derive(Clone, Debug, structopt::StructOpt)]
 pub struct Opt {
+    #[structopt(subcommand)]
+    pub command: Option<Command>,
     #[structopt(short, long, env, default_value = "localhost:4447")]
     pub listen: String,
     #[structopt(short, long, env, default_value = "localhost:2379")]
@@ -20,6 +22,18 @@ pub struct Opt {
     pub nats_prefix: String,
     #[structopt(short, long, env, default_value = "60")]
     pub dispatch_interval: u64,
+}
+
+#[derive(Clone, Debug, structopt::StructOpt)]
+pub enum Command {
+    Server,
+    Worker,
+}
+
+impl Default for Command {
+    fn default() -> Self {
+        Command::Server
+    }
 }
 
 impl Opt {
