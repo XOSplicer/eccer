@@ -13,7 +13,7 @@ pub struct Db {
 }
 
 impl Db {
-    pub fn new(prefix: String, client: etcd_client::Client) -> Self {
+    pub fn new(client: etcd_client::Client, prefix: String) -> Self {
         Self { prefix, client }
     }
 

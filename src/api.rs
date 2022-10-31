@@ -1,4 +1,4 @@
-use crate::{opt, db};
+use crate::{opt, db, error};
 use serde::Serialize;
 use tide::prelude::*;
 use tide::utils::After;
@@ -43,7 +43,8 @@ struct State {
     db: db::Db,
 }
 
-pub async fn run(opt: opt::Opt, db: db::Db) -> tide::Result<()> {
+pub async fn run(opt: opt::Opt, db: db::Db) -> error::Result<()> {
+    log::info!("Starting API");
     let listen = opt.listen.clone();
     let state = State { db, opt };
     let mut app = tide::with_state(state);
@@ -68,7 +69,7 @@ pub async fn run(opt: opt::Opt, db: db::Db) -> tide::Result<()> {
         .get(read);
 
     log::info!("API will listen on {}", &listen);
-    app.listen(listen).await?;
+    app.listen(listen).await.map_err(error::Error::RunApiError)?;
     Ok(())
 }
 

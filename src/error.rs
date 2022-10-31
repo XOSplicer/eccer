@@ -10,4 +10,10 @@ pub enum Error {
     FromEtcdStringError(#[from] std::str::Utf8Error),
     #[error("key malformed")]
     ParseEtcdKeyError,
+    #[error("error while running API")]
+    RunApiError(std::io::Error),
+    #[error("error while running queue dispatch")]
+    RunDispatchError(std::io::Error),
 }
+
+pub type Result<T> = std::result::Result<T, Error>;
