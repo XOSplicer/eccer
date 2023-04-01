@@ -1,10 +1,10 @@
-use crate::{opt, db, error};
+use crate::{db, error, opt};
 use serde::Serialize;
-use tide::prelude::*;
-use tide::utils::After;
-use tide::Request;
+
 use tide::log::LogMiddleware;
+use tide::utils::After;
 use tide::Body;
+use tide::Request;
 use url::Url;
 
 // FIXME: id vs name ??
@@ -34,8 +34,6 @@ fn endpoint_key_from_req<S>(req: &Request<S>) -> tide::Result<db::EndpointKey> {
         endpoint_name: req.param("endpoint_name")?.into(),
     })
 }
-
-
 
 #[derive(Clone)]
 struct State {
@@ -69,16 +67,16 @@ pub async fn run(opt: opt::Opt, db: db::Db) -> error::Result<()> {
         .get(read);
 
     log::info!("API will listen on {}", &listen);
-    app.listen(listen).await.map_err(error::Error::RunApiError)?;
+    app.listen(listen)
+        .await
+        .map_err(error::Error::RunApiError)?;
     Ok(())
 }
-
 
 async fn root(_req: Request<State>) -> tide::Result {
     let s = format!("Welcome to eccer v{}", env!("CARGO_PKG_VERSION"));
     Ok(s.into())
 }
-
 
 async fn ping(_req: Request<State>) -> tide::Result {
     Ok("ok".into())

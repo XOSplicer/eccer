@@ -2,27 +2,28 @@
 #![allow(dead_code)]
 
 // TODO: replace tide with tokio compatible http server instead of async-std
-use tide::prelude::*;
-use tokio;
-use structopt::StructOpt;
+
 use env_logger::Env;
 use futures_util::StreamExt;
-use futures_util::TryStreamExt;
+use structopt::StructOpt;
+use tokio;
 
+mod api;
 mod db;
+mod dispatch;
 mod error;
 mod opt;
-mod api;
-mod dispatch;
 mod queue;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-
     env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
     let opt: opt::Opt = opt::Opt::from_args();
 
-    log::info!("Connecting to etcd, using endpoints {:?}", &opt.etcd_endpoints);
+    log::info!(
+        "Connecting to etcd, using endpoints {:?}",
+        &opt.etcd_endpoints
+    );
     let etcd_options = opt.etcd_connect_options();
     let etcd = etcd_client::Client::connect(&opt.etcd_endpoints, Some(etcd_options)).await?;
     let db = db::Db::new(etcd, opt.etcd_prefix.clone());
@@ -52,7 +53,7 @@ async fn run_server(opt: opt::Opt, db: db::Db, queue: queue::Queue) -> anyhow::R
     Ok(())
 }
 
-async fn run_worker(opt: opt::Opt, db: db::Db, queue: queue::Queue) -> anyhow::Result<()> {
+async fn run_worker(_opt: opt::Opt, _db: db::Db, queue: queue::Queue) -> anyhow::Result<()> {
     log::info!("Running eccer worker");
     let input = queue.subscribe_ping().await?;
     futures_util::pin_mut!(input);
@@ -61,4 +62,3 @@ async fn run_worker(opt: opt::Opt, db: db::Db, queue: queue::Queue) -> anyhow::R
     }
     Ok(())
 }
-
