@@ -1,3 +1,6 @@
+#![forbid(unsafe_code)]
+#![allow(dead_code)]
+
 // TODO: replace tide with tokio compatible http server instead of async-std
 use tide::prelude::*;
 use tokio;
