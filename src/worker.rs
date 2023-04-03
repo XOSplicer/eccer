@@ -36,11 +36,23 @@ pub async fn run_worker(opt: opt::Opt, mut db: db::Db, queue: queue::Queue) -> a
             duration_ms
         );
         if is_success {
-            db.record_endpoint_success(key, chrono::offset::Utc::now())
+            db.record_endpoint_success(key.clone(), chrono::offset::Utc::now())
                 .await?;
         } else {
-            db.record_endpoint_failure(key, chrono::offset::Utc::now())
+            let failures = db
+                .record_endpoint_failure(key.clone(), chrono::offset::Utc::now())
                 .await?;
+            if let Some(max_failures) = opt.delete_after_failures {
+                if failures >= max_failures {
+                    log::info!(
+                        "DELETE key={} failures={} max_failures={}",
+                        &key,
+                        failures,
+                        max_failures,
+                    );
+                    db.delete_endpoint(key.clone()).await?;
+                }
+            }
         }
     }
     Ok(())

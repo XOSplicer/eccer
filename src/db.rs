@@ -122,6 +122,18 @@ impl Db {
         Ok(())
     }
 
+    async fn delete_endpoint_property(
+        &mut self,
+        endpoint: EndpointKey,
+        property: String,
+    ) -> Result<(), Error> {
+        let key = self
+            .new_prefixed_property_key(property, endpoint)
+            .to_string();
+        self.client.delete(key, None).await?;
+        Ok(())
+    }
+
     pub async fn get_endpoint_stats(
         &mut self,
         endpoint: EndpointKey,
@@ -232,6 +244,20 @@ impl Db {
         )
         .await?;
         Ok(new_success_count)
+    }
+
+    pub async fn delete_endpoint(&mut self, endpoint: EndpointKey) -> Result<(), Error> {
+        self.delete_endpoint_property(endpoint.clone(), "url".to_string())
+            .await?;
+        self.delete_endpoint_property(endpoint.clone(), "last_success".to_string())
+            .await?;
+        self.delete_endpoint_property(endpoint.clone(), "last_failure".to_string())
+            .await?;
+        self.delete_endpoint_property(endpoint.clone(), "success_count".to_string())
+            .await?;
+        self.delete_endpoint_property(endpoint.clone(), "failure_count".to_string())
+            .await?;
+        Ok(())
     }
 }
 
