@@ -14,6 +14,8 @@ mod dispatch;
 mod error;
 mod opt;
 mod queue;
+mod server;
+mod worker;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -36,29 +38,9 @@ async fn main() -> anyhow::Result<()> {
     log::info!("Established connection to nats");
 
     match opt.command.clone().unwrap_or_default() {
-        opt::Command::Server => run_server(opt, db, queue).await?,
-        opt::Command::Worker => run_worker(opt, db, queue).await?,
+        opt::Command::Server => server::run_server(opt, db, queue).await?,
+        opt::Command::Worker => worker::run_worker(opt, db, queue).await?,
     }
 
-    Ok(())
-}
-
-async fn run_server(opt: opt::Opt, db: db::Db, queue: queue::Queue) -> anyhow::Result<()> {
-    log::info!("Running eccer server");
-    tokio::try_join!(
-        api::run(opt.clone(), db.clone()),
-        dispatch::run(opt.clone(), db, queue),
-    )?;
-
-    Ok(())
-}
-
-async fn run_worker(_opt: opt::Opt, _db: db::Db, queue: queue::Queue) -> anyhow::Result<()> {
-    log::info!("Running eccer worker");
-    let input = queue.subscribe_ping().await?;
-    futures_util::pin_mut!(input);
-    while let Some(key) = input.next().await {
-        log::info!("got {}", key?);
-    }
     Ok(())
 }
