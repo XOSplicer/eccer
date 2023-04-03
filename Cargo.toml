@@ -1,6 +1,6 @@
 [package]
 name = "eccer"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["Felix Stegmaier <stegmaier.felix@gmail.com>"]
 edition = "2021"
 
