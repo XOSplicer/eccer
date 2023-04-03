@@ -1,2 +1,5 @@
 .git
 target
+Dockerfile
+docker-compose.yml
+test_target.yml
