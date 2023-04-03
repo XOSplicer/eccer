@@ -65,6 +65,8 @@ pub async fn run(opt: opt::Opt, db: db::Db) -> error::Result<()> {
     app.at("/services/:service_name/instances/:instance_name/endpoints/:endpoint_name")
         .post(register)
         .get(read);
+    app.at("/services/:service_name/instances/:instance_name/endpoints/:endpoint_name/stats")
+        .get(read_stats);
 
     log::info!("API will listen on {}", &listen);
     app.listen(listen)
@@ -112,4 +114,11 @@ async fn read_all(req: Request<State>) -> tide::Result {
     let mut db = req.state().db.clone();
     let endpoint_urls = db.get_all_endpoint_urls().await?;
     Ok(Body::from_json(&endpoint_urls)?.into())
+}
+
+async fn read_stats(req: Request<State>) -> tide::Result {
+    let endpoint = endpoint_key_from_req(&req)?;
+    let mut db = req.state().db.clone();
+    let endpoint_stats = db.get_endpoint_stats(endpoint.clone()).await?;
+    Ok(Body::from_json(&endpoint_stats)?.into())
 }

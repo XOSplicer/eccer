@@ -1,4 +1,6 @@
 use crate::error::Error;
+use chrono::DateTime;
+use chrono::Utc;
 use etcd_client::GetOptions;
 use serde::Serialize;
 use std::fmt;
@@ -88,12 +90,92 @@ impl Db {
     // following ranges with last key + \0
     // # etcdctl -w fields get --keys-only --sort-by=KEY --rev 4 eccer/url/myservice/1/https\0 eccer\0
     // }
+
+    async fn get_endpoint_property(
+        &mut self,
+        endpoint: EndpointKey,
+        property: String,
+    ) -> Result<String, Error> {
+        let key = self
+            .new_prefixed_property_key(property, endpoint)
+            .to_string();
+        let res = self.client.get(key, None).await?;
+        let s = res
+            .kvs()
+            .get(0)
+            .ok_or(Error::NotFound)?
+            .value_str()?
+            .to_string();
+        Ok(s)
+    }
+
+    pub async fn get_endpoint_stats(
+        &mut self,
+        endpoint: EndpointKey,
+    ) -> Result<EndpointStats, Error> {
+        let url: Url = self
+            .get_endpoint_property(endpoint.clone(), "url".to_string())
+            .await?
+            .parse()?;
+        let last_success: Option<DateTime<Utc>> = match self
+            .get_endpoint_property(endpoint.clone(), "last_success".to_string())
+            .await
+        {
+            Ok(s) => s.parse().map(|d| Some(d)).map_err(From::from),
+            Err(Error::NotFound) => Ok(None),
+            Err(e) => Err(e),
+        }?;
+        let last_failure: Option<DateTime<Utc>> = match self
+            .get_endpoint_property(endpoint.clone(), "last_failure".to_string())
+            .await
+        {
+            Ok(s) => s.parse().map(|d| Some(d)).map_err(From::from),
+            Err(Error::NotFound) => Ok(None),
+            Err(e) => Err(e),
+        }?;
+        let success_count: u64 = match self
+            .get_endpoint_property(endpoint.clone(), "success_count".to_string())
+            .await
+        {
+            Ok(s) => s.parse().map(|d| Some(d)).map_err(From::from),
+            Err(Error::NotFound) => Ok(None),
+            Err(e) => Err(e),
+        }?
+        .unwrap_or(0);
+        let failure_count: u64 = match self
+            .get_endpoint_property(endpoint.clone(), "failure_count".to_string())
+            .await
+        {
+            Ok(s) => s.parse().map(|d| Some(d)).map_err(From::from),
+            Err(Error::NotFound) => Ok(None),
+            Err(e) => Err(e),
+        }?
+        .unwrap_or(0);
+        Ok(EndpointStats {
+            key: endpoint,
+            url,
+            last_success,
+            last_failure,
+            success_count,
+            failure_count,
+        })
+    }
 }
 
 #[derive(Debug, Clone, Serialize)]
 pub struct EndpointRecord {
     pub key: EndpointKey,
     pub url: Url,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct EndpointStats {
+    pub key: EndpointKey,
+    pub url: Url,
+    pub last_success: Option<DateTime<Utc>>,
+    pub last_failure: Option<DateTime<Utc>>,
+    pub success_count: u64,
+    pub failure_count: u64,
 }
 
 trait Key: fmt::Display + std::str::FromStr<Err = Error> {}

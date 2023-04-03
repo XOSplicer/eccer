@@ -6,6 +6,10 @@ pub enum Error {
     NotFound,
     #[error("url parse error")]
     ParseUrlError(#[from] url::ParseError),
+    #[error("date parse error")]
+    ParseDateError(#[from] chrono::ParseError),
+    #[error("int parse error")]
+    ParseIntError(#[from] std::num::ParseIntError),
     #[error("etcd utf-8 string error")]
     FromEtcdStringError(#[from] std::str::Utf8Error),
     #[error("key malformed")]
