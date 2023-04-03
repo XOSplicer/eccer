@@ -109,6 +109,19 @@ impl Db {
         Ok(s)
     }
 
+    async fn set_endpoint_property(
+        &mut self,
+        endpoint: EndpointKey,
+        property: String,
+        value: String,
+    ) -> Result<(), Error> {
+        let key = self
+            .new_prefixed_property_key(property, endpoint)
+            .to_string();
+        self.client.put(key, value, None).await?;
+        Ok(())
+    }
+
     pub async fn get_endpoint_stats(
         &mut self,
         endpoint: EndpointKey,
@@ -159,6 +172,66 @@ impl Db {
             success_count,
             failure_count,
         })
+    }
+
+    pub async fn record_endpoint_success(
+        &mut self,
+        endpoint: EndpointKey,
+        dt: DateTime<Utc>,
+    ) -> Result<u64, Error> {
+        self.set_endpoint_property(
+            endpoint.clone(),
+            "last_success".to_string(),
+            dt.to_rfc3339(),
+        )
+        .await?;
+        let success_count: u64 = match self
+            .get_endpoint_property(endpoint.clone(), "success_count".to_string())
+            .await
+        {
+            Ok(s) => s.parse().map(|d| Some(d)).map_err(From::from),
+            Err(Error::NotFound) => Ok(None),
+            Err(e) => Err(e),
+        }?
+        .unwrap_or(0);
+        let new_success_count = success_count + 1;
+        self.set_endpoint_property(
+            endpoint,
+            "success_count".to_string(),
+            format!("{}", new_success_count),
+        )
+        .await?;
+        Ok(new_success_count)
+    }
+
+    pub async fn record_endpoint_failure(
+        &mut self,
+        endpoint: EndpointKey,
+        dt: DateTime<Utc>,
+    ) -> Result<u64, Error> {
+        self.set_endpoint_property(
+            endpoint.clone(),
+            "last_failure".to_string(),
+            dt.to_rfc3339(),
+        )
+        .await?;
+        let success_count: u64 = match self
+            .get_endpoint_property(endpoint.clone(), "failure_count".to_string())
+            .await
+        {
+            Ok(s) => s.parse().map(|d| Some(d)).map_err(From::from),
+            Err(Error::NotFound) => Ok(None),
+            Err(e) => Err(e),
+        }?
+        .unwrap_or(0);
+        let new_success_count = success_count + 1;
+        self.set_endpoint_property(
+            endpoint,
+            "failure_count".to_string(),
+            format!("{}", new_success_count),
+        )
+        .await?;
+        Ok(new_success_count)
     }
 }
 

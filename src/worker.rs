@@ -8,12 +8,12 @@ use tokio;
 
 use crate::{db, dispatch, opt, queue};
 
-pub async fn run_worker(_opt: opt::Opt, mut db: db::Db, queue: queue::Queue) -> anyhow::Result<()> {
+pub async fn run_worker(opt: opt::Opt, mut db: db::Db, queue: queue::Queue) -> anyhow::Result<()> {
     log::info!("Running eccer worker");
     let input = queue.subscribe_ping().await?;
     futures_util::pin_mut!(input);
     let client: Client = Config::new()
-        .set_timeout(Some(Duration::from_secs(5)))
+        .set_timeout(Some(Duration::from_secs(opt.request_timeout)))
         .try_into()?;
     while let Some(key) = input.next().await {
         let key = key?;
@@ -35,6 +35,13 @@ pub async fn run_worker(_opt: opt::Opt, mut db: db::Db, queue: queue::Queue) -> 
             is_success,
             duration_ms
         );
+        if is_success {
+            db.record_endpoint_success(key, chrono::offset::Utc::now())
+                .await?;
+        } else {
+            db.record_endpoint_failure(key, chrono::offset::Utc::now())
+                .await?;
+        }
     }
     Ok(())
 }
