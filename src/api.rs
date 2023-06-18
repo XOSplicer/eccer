@@ -6,6 +6,7 @@ use tide::utils::After;
 use tide::Body;
 use tide::Request;
 use url::Url;
+use tracing::{info, error};
 
 // FIXME: id vs name ??
 #[derive(Debug, Serialize)]
@@ -42,7 +43,7 @@ struct State {
 }
 
 pub async fn run(opt: opt::Opt, db: db::Db) -> error::Result<()> {
-    log::info!("Starting API");
+    info!("Starting API");
     let listen = opt.listen.clone();
     let state = State { db, opt };
     let mut app = tide::with_state(state);
@@ -51,7 +52,7 @@ pub async fn run(opt: opt::Opt, db: db::Db) -> error::Result<()> {
     // FIXME: error handling
     app.with(After(|mut res: tide::Response| async {
         if let Some(err) = res.error() {
-            log::error!("Request failed: {:?}", &err);
+            error!("Request failed: {:?}", &err);
             let msg = format!("Error: {:?}", &err);
             res.set_body(msg);
         }
@@ -68,7 +69,7 @@ pub async fn run(opt: opt::Opt, db: db::Db) -> error::Result<()> {
     app.at("/services/:service_name/instances/:instance_name/endpoints/:endpoint_name/stats")
         .get(read_stats);
 
-    log::info!("API will listen on {}", &listen);
+    info!("API will listen on {}", &listen);
     app.listen(listen)
         .await
         .map_err(error::Error::RunApiError)?;

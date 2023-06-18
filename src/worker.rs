@@ -1,15 +1,13 @@
-use env_logger::Env;
 use futures_util::StreamExt;
 use std::convert::TryInto;
 use std::time::{Duration, Instant};
-use structopt::StructOpt;
 use surf::{Client, Config};
-use tokio;
+use tracing::info;
 
-use crate::{db, dispatch, opt, queue};
+use crate::{db, opt, queue};
 
 pub async fn run_worker(opt: opt::Opt, mut db: db::Db, queue: queue::Queue) -> anyhow::Result<()> {
-    log::info!("Running eccer worker");
+    info!("Running eccer worker");
     let input = queue.subscribe_ping().await?;
     futures_util::pin_mut!(input);
     let client: Client = Config::new()
@@ -18,7 +16,7 @@ pub async fn run_worker(opt: opt::Opt, mut db: db::Db, queue: queue::Queue) -> a
     while let Some(key) = input.next().await {
         let key = key?;
         let url = db.get_endpoint_url(key.clone()).await?;
-        log::info!("GET ping key={} url={}", &key, &url);
+        info!("GET ping key={} url={}", &key, &url);
         let start = Instant::now();
         let res_status = client.get(&url).await.map(|res| res.status());
         let is_success = match res_status {
@@ -27,13 +25,9 @@ pub async fn run_worker(opt: opt::Opt, mut db: db::Db, queue: queue::Queue) -> a
         };
         let duration = Instant::now().duration_since(start);
         let duration_ms = duration.as_micros() as f64 / 1000.0;
-        log::info!(
+        info!(
             "GET repsonse key={} url={} response={:?} success={} duration={:.2}ms",
-            &key,
-            &url,
-            res_status,
-            is_success,
-            duration_ms
+            &key, &url, res_status, is_success, duration_ms
         );
         if is_success {
             db.record_endpoint_success(key.clone(), chrono::offset::Utc::now())
@@ -44,11 +38,9 @@ pub async fn run_worker(opt: opt::Opt, mut db: db::Db, queue: queue::Queue) -> a
                 .await?;
             if let Some(max_failures) = opt.delete_after_failures {
                 if failures >= max_failures {
-                    log::info!(
+                    info!(
                         "DELETE key={} failures={} max_failures={}",
-                        &key,
-                        failures,
-                        max_failures,
+                        &key, failures, max_failures,
                     );
                     db.delete_endpoint(key.clone()).await?;
                 }

@@ -25,7 +25,7 @@ pub struct Opt {
     #[structopt(long, env, default_value = "1")]
     pub request_timeout: u64,
     #[structopt(long, env)]
-    pub delete_after_failures: Option<u64>
+    pub delete_after_failures: Option<u64>,
 }
 
 #[derive(Clone, Debug, structopt::StructOpt)]
