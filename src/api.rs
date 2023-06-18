@@ -11,9 +11,9 @@ use axum::{
 };
 use axum_prometheus::PrometheusMetricLayer;
 use serde::Serialize;
-use std::sync::Arc;
+use std::{net::ToSocketAddrs, sync::Arc};
 use tower_http::trace::TraceLayer;
-use tracing::info;
+use tracing::{error, info};
 use url::Url;
 
 // FIXME: id vs name ??
@@ -77,8 +77,10 @@ pub async fn run(opt: opt::Opt, db: db::Db) -> error::Result<()> {
     info!("API will listen on {}", &listen);
     axum::Server::bind(
         &listen
-            .parse()
-            .expect("Invalid listen address for server bind"),
+            .to_socket_addrs()
+            .expect("Failed to resolve socket address")
+            .next()
+            .expect("Failed to resolve socket address"),
     )
     .serve(app.into_make_service())
     .await
@@ -112,10 +114,12 @@ async fn register(
     let endpoint = endpoint_key_from_path(path);
     let endpoint_url = Url::parse(&body).map_err(|_| StatusCode::BAD_REQUEST)?;
     let mut db = state.db.clone();
-    // TODO: expect? or Internal Error
     db.add_endpoint_url(endpoint.clone(), &endpoint_url)
         .await
-        .expect("Could not add endpoint url");
+        .map_err(|err| {
+            error!(error = %err, "Could not add endpoint url");
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
     let read_response = ReadResponse::from_endpoint_url(endpoint, endpoint_url);
     Ok((StatusCode::CREATED, Json(read_response)))
 }
@@ -131,8 +135,10 @@ async fn read(
         .await
         .map_err(|err| match err {
             crate::error::Error::NotFound => StatusCode::NOT_FOUND,
-            // TODO: panic? or Internal Error
-            _ => panic!("Could not get endpoint url"),
+            _ => {
+                error!(error = %err, "Could get endpoint url");
+                StatusCode::INTERNAL_SERVER_ERROR
+            }
         })?;
     let read_response = ReadResponse::from_endpoint_url(endpoint, endpoint_url);
     Ok(Json(read_response))
@@ -142,11 +148,10 @@ async fn read_all(
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<Vec<EndpointRecord>>, StatusCode> {
     let mut db = state.db.clone();
-    // TODO: expect? or Internal Error
-    let endpoint_urls = db
-        .get_all_endpoint_urls()
-        .await
-        .expect("Could not read all endpoint urls");
+    let endpoint_urls = db.get_all_endpoint_urls().await.map_err(|err| {
+        error!(error = %err, "Could not read all endpoint urls");
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
     Ok(Json(endpoint_urls))
 }
 
@@ -156,10 +161,15 @@ async fn read_stats(
 ) -> Result<Json<EndpointStats>, StatusCode> {
     let endpoint = endpoint_key_from_path(path);
     let mut db = state.db.clone();
-    // TODO: expect? or Internal Error
-    let endpoint_stats = db
-        .get_endpoint_stats(endpoint.clone())
-        .await
-        .expect("Could not read endpoint stats");
+    let endpoint_stats =
+        db.get_endpoint_stats(endpoint.clone())
+            .await
+            .map_err(|err| match err {
+                crate::error::Error::NotFound => StatusCode::NOT_FOUND,
+                _ => {
+                    error!(error = %err, "Could not get endpoint stats");
+                    StatusCode::INTERNAL_SERVER_ERROR
+                }
+            })?;
     Ok(Json(endpoint_stats))
 }
