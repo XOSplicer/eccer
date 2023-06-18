@@ -2,7 +2,6 @@
 #![allow(dead_code)]
 
 // TODO: replace tide with tokio compatible http server instead of async-std
-// also replace surf
 
 use structopt::StructOpt;
 use tokio;
