@@ -2,7 +2,7 @@ use crate::error::Error;
 use chrono::DateTime;
 use chrono::Utc;
 use etcd_client::GetOptions;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::fmt;
 use url::Url;
 
@@ -341,7 +341,7 @@ impl<K: Key> PropertyKey<K> {
     }
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone)]
 pub struct EndpointKey {
     pub service_name: String,
     pub instance_name: String,
@@ -372,6 +372,25 @@ impl std::str::FromStr for EndpointKey {
             instance_name,
             endpoint_name,
         })
+    }
+}
+
+impl Serialize for EndpointKey {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(&format!("{}", self))
+    }
+}
+
+impl<'de> Deserialize<'de> for EndpointKey {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        s.parse().map_err(serde::de::Error::custom)
     }
 }
 

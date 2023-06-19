@@ -16,21 +16,16 @@ use tower_http::trace::TraceLayer;
 use tracing::{error, info};
 use url::Url;
 
-// FIXME: id vs name ??
 #[derive(Debug, Serialize)]
 struct ReadResponse {
-    service_name: String,
-    endpoint_name: String,
-    instance_name: String,
+    key: db::EndpointKey,
     endpoint_url: Url,
 }
 
 impl ReadResponse {
     fn from_endpoint_url(endpoint: db::EndpointKey, url: Url) -> Self {
         ReadResponse {
-            service_name: endpoint.service_name,
-            instance_name: endpoint.instance_name,
-            endpoint_name: endpoint.endpoint_name,
+            key: endpoint,
             endpoint_url: url,
         }
     }
@@ -68,7 +63,15 @@ pub async fn run(opt: opt::Opt, db: db::Db) -> error::Result<()> {
             get(read).post(register),
         )
         .route(
+            "/key/:service_name/:instance_name/:endpoint_name",
+            get(read).post(register),
+        )
+        .route(
             "/services/:service_name/instances/:instance_name/endpoints/:endpoint_name/stats",
+            get(read_stats),
+        )
+        .route(
+            "/key/:service_name/:instance_name/:endpoint_name/stats",
             get(read_stats),
         )
         .with_state(shared_state)
@@ -105,7 +108,7 @@ async fn openapi() -> impl IntoResponse {
 
 type EndpointKeyPath = Path<(String, String, String)>;
 
-// FIXME: turn this into a json api
+// FIXME: turn this into a json and raw api
 async fn register(
     State(state): State<Arc<AppState>>,
     path: EndpointKeyPath,
