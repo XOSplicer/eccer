@@ -676,6 +676,7 @@ dependencies = [
  "futures-core",
  "futures-util",
  "hyper",
+ "metrics",
  "nats",
  "reqwest",
  "serde",
