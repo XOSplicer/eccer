@@ -1,4 +1,4 @@
-FROM rust:1.70.0-bookworm as builder
+FROM rust:1.86.0-bookworm AS builder
 WORKDIR /usr/src/eccer
 RUN apt-get update \
     && apt-get install -y protobuf-compiler libssl-dev libssl3 libcurl4 openssl ca-certificates \

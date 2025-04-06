@@ -1,36 +1,39 @@
-#[derive(Clone, Debug, structopt::StructOpt)]
+#[derive(Clone, Debug, clap::Parser)]
+#[command(version, about)]
 pub struct Opt {
-    #[structopt(subcommand)]
+    #[command(subcommand)]
     pub command: Option<Command>,
-    #[structopt(short, long, env, default_value = "localhost:4447")]
+    #[arg(short, long, env, default_value = "localhost:4447")]
     pub listen: String,
-    #[structopt(short, long, env, default_value = "localhost:2379")]
+    #[arg(short, long, env, default_value = "localhost:2379")]
     pub etcd_endpoints: Vec<String>,
-    #[structopt(long, env)]
+    #[arg(long, env)]
     pub etcd_user: Option<String>,
-    #[structopt(long, env, hide_env_values = true)]
+    #[arg(long, env, hide_env_values = true)]
     pub etcd_password: Option<String>,
-    #[structopt(long, env, default_value = "eccer")]
+    #[arg(long, env, default_value = "eccer")]
     pub etcd_prefix: String,
-    #[structopt(short, long, env, default_value = "localhost:4222")]
+    #[arg(short, long, env, default_value = "localhost:4222")]
     pub nats_address: String,
-    #[structopt(long, env)]
+    #[arg(long, env)]
     pub nats_user: Option<String>,
-    #[structopt(long, env, hide_env_values = true)]
+    #[arg(long, env, hide_env_values = true)]
     pub nats_password: Option<String>,
-    #[structopt(long, env, default_value = "eccer")]
+    #[arg(long, env, default_value = "eccer")]
     pub nats_prefix: String,
-    #[structopt(short, long, env, default_value = "60")]
+    #[arg(short, long, env, default_value = "60")]
     pub dispatch_interval: u64,
-    #[structopt(long, env, default_value = "1")]
+    #[arg(long, env, default_value = "1")]
     pub request_timeout: u64,
-    #[structopt(long, env)]
+    #[arg(long, env)]
     pub delete_after_failures: Option<u64>,
 }
 
-#[derive(Clone, Debug, structopt::StructOpt)]
+#[derive(Clone, Debug, clap::Subcommand)]
 pub enum Command {
+    /// Run API server process
     Server,
+    /// Run worker process
     Worker,
 }
 
