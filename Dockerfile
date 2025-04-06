@@ -8,7 +8,7 @@ COPY Cargo.toml .
 COPY Cargo.lock .
 RUN cargo check
 COPY . .
-RUN cargo install --path .
+RUN cargo install --locked --path .
 
 FROM debian:bookworm-slim
 RUN apt-get update \
