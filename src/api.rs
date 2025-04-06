@@ -11,7 +11,8 @@ use axum::{
 };
 use axum_prometheus::PrometheusMetricLayer;
 use serde::Serialize;
-use std::{net::ToSocketAddrs, sync::Arc};
+use std::sync::Arc;
+use tokio::net::TcpListener;
 use tower_http::trace::TraceLayer;
 use tracing::{error, info};
 use url::Url;
@@ -78,16 +79,10 @@ pub async fn run(opt: opt::Opt, db: db::Db) -> error::Result<()> {
         .layer(prometheus_layer)
         .layer(TraceLayer::new_for_http());
     info!("API will listen on {}", &listen);
-    axum::Server::bind(
-        &listen
-            .to_socket_addrs()
-            .expect("Failed to resolve socket address")
-            .next()
-            .expect("Failed to resolve socket address"),
-    )
-    .serve(app.into_make_service())
-    .await
-    .expect("Error while running API");
+    let listener = TcpListener::bind(&listen).await.unwrap();
+    axum::serve(listener, app)
+        .await
+        .expect("Error while running API");
     Ok(())
 }
 

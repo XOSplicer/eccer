@@ -10,15 +10,14 @@ edition = "2021"
 anyhow = "1"
 async-stream = "0.3.6"
 # TODO: update axum
-axum = "0.6.18"
-axum-prometheus = "0.3.3"
+axum = "0.8.3"
+axum-prometheus = "0.8.0"
 chrono = { version = "0.4.40", features = ["clock", "serde"] }
 clap = { version = "4.5.35", features = ["derive", "env"] }
 etcd-client = "0.14.1"
 futures-core = "0.3.31"
 futures-util = "0.3.31"
-# TODO: update hyer to v1 SEE https://hyper.rs/guides/1/upgrading/
-hyper = { version = "0.14.26", features = ["full"] }
+hyper = { version = "1" }
 nats = "0.25.0"
 reqwest = "0.12.15"
 serde = "1"
@@ -27,8 +26,8 @@ serde_json = "1"
 thiserror = "1"
 tokio = { version = "1", features = ["full"] }
 # TODO: update tower
-tower = "0.4.13"
-tower-http = { version = "0.4.0", features = ["trace"] }
+tower = "0.5.2"
+tower-http = { version = "0.5", features = ["trace"] }
 tracing = "0.1.41"
 tracing-subscriber = "0.3.19"
 url = { version = "2", features = ["serde"] }
