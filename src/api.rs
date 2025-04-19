@@ -1,6 +1,6 @@
 use crate::{
     db::{self, EndpointRecord, EndpointStats},
-    error, opt,
+    opt,
 };
 use axum::{
     extract::{Path, State},
@@ -48,19 +48,16 @@ struct AppState {
     db: db::Db,
 }
 
-pub async fn run(opt: opt::Opt, db: db::Db) -> error::Result<()> {
+pub async fn run(opt: opt::Opt, db: db::Db) -> anyhow::Result<()> {
     info!("Starting API");
     let listen = opt.listen.clone();
     let shared_state = Arc::new(AppState { db, opt });
-    // TODO: add other metrics to prometheus if possible
-    // eg. from nats connection, etcd connection
-    // and add our own metrics where possible eg pending tasks, num workers etc
-    let (prometheus_layer, metric_handle) = PrometheusMetricLayer::pair();
+
+    let prometheus_layer = PrometheusMetricLayer::new();
     let app = Router::new()
         .route("/", get(root))
         .route("/ping", get(ping))
         .route("/openapi.yaml", get(openapi))
-        .route("/metrics", get(|| async move { metric_handle.render() }))
         .route("/all", get(read_all))
         .route(
             "/services/{service_name}/instances/{instance_name}/endpoints/{endpoint_name}",
@@ -81,7 +78,7 @@ pub async fn run(opt: opt::Opt, db: db::Db) -> error::Result<()> {
         .with_state(shared_state)
         .layer(prometheus_layer)
         .layer(TraceLayer::new_for_http());
-    info!("API will listen on {}", &listen);
+    info!("API will listen on http://{}", &listen);
     let listener = TcpListener::bind(&listen).await.unwrap();
     axum::serve(listener, app)
         .await
@@ -90,6 +87,7 @@ pub async fn run(opt: opt::Opt, db: db::Db) -> error::Result<()> {
 }
 
 async fn root() -> String {
+    // TODO use Html<String>
     // TODO: print more info, like nats
     // eg INFO {"server_id":"NDXNA2LRDBHRQOSXJYFZC7X3UNJAAFEY5OY4GDZKLNPKOAQ7QGRJMOWX","server_name":"NDXNA2LRDBHRQOSXJYFZC7X3UNJAAFEY5OY4GDZKLNPKOAQ7QGRJMOWX","version":"2.9.15","proto":1,"git_commit":"b91fa85","go":"go1.19.6","host":"0.0.0.0","port":4222,"headers":true,"max_payload":1048576,"client_id":12,"client_ip":"172.19.0.1","cluster":"my_cluster","connect_urls":["172.19.0.4:4222","172.19.0.6:4222","172.19.0.7:4222"]}
     // -ERR 'Unknown Protocol Operation'

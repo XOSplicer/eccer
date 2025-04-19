@@ -1,13 +1,11 @@
 use crate::db::EndpointKey;
 use crate::error;
+use crate::metric_names::{QUEUE_MESSAGES_PUBLISHED_TOTAL, QUEUE_MESSAGES_RECIEVED_TOTAL};
 
 pub struct Queue {
     client: nats::asynk::Connection,
     prefix: String,
 }
-
-static MESSAGES_PUBLISHED: &'static str = &"eccer_messages_published";
-static MESSAGES_RECIEVED: &'static str = &"eccer_messages_recieved";
 
 impl Queue {
     pub fn new(client: nats::asynk::Connection, prefix: String) -> Self {
@@ -26,7 +24,7 @@ impl Queue {
         self.client
             .publish(&self.subject("hello"), "Hello, world!")
             .await?;
-        metrics::counter!(MESSAGES_PUBLISHED, "message" => "hello").increment(1);
+        metrics::counter!(QUEUE_MESSAGES_PUBLISHED_TOTAL, "message" => "hello").increment(1);
         Ok(())
     }
 
@@ -34,7 +32,7 @@ impl Queue {
         self.client
             .publish(&self.subject("ping"), endpoint.to_string())
             .await?;
-        metrics::counter!(MESSAGES_PUBLISHED, "message" => "ping").increment(1);
+        metrics::counter!(QUEUE_MESSAGES_PUBLISHED_TOTAL, "message" => "ping").increment(1);
         Ok(())
     }
 
@@ -47,7 +45,7 @@ impl Queue {
             .await?;
         Ok(async_stream::try_stream! {
             while let Some(msg) = sub.next().await {
-                metrics::counter!(MESSAGES_RECIEVED, "message" => "ping").increment(1);
+                metrics::counter!(QUEUE_MESSAGES_RECIEVED_TOTAL, "message" => "ping").increment(1);
                 let s = std::str::from_utf8(&msg.data).map_err(|_| error::Error::ParseEtcdKeyError)?;
                 let key: EndpointKey = s.parse()?;
                 yield key;

@@ -3,7 +3,7 @@ use std::time::Duration;
 use tokio;
 use tracing::info;
 
-pub async fn run(opt: opt::Opt, mut db: db::Db, queue: queue::Queue) -> error::Result<()> {
+pub async fn run(opt: opt::Opt, mut db: db::Db, queue: queue::Queue) -> anyhow::Result<()> {
     info!("Starting dispatch");
     let mut interval = tokio::time::interval(Duration::from_secs(opt.dispatch_interval));
     loop {

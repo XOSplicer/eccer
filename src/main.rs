@@ -12,6 +12,8 @@ mod api;
 mod db;
 mod dispatch;
 mod error;
+mod metric_names;
+mod metrics_endpoint;
 mod opt;
 mod queue;
 mod server;

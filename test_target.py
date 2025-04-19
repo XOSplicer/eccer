@@ -4,6 +4,7 @@ import sys
 from threading import Thread
 from socketserver import ThreadingMixIn
 from http.server import HTTPServer, BaseHTTPRequestHandler
+import requests
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -20,6 +21,7 @@ class ThreadingHTTPServer(ThreadingMixIn, HTTPServer):
 
 def serve_on_port(port):
     server = ThreadingHTTPServer(("localhost", port), Handler)
+    requests.post(f"http://localhost:4447/services/test_target/instances/{port}/endpoints/default", data=f"http://localhost:{port}/")
     server.serve_forever()
 
 
